@@ -16,66 +16,113 @@ class Users extends SR_Controller {
 
     public function get_index() {
         $auth = json_decode($this->jwt->check(), true);
-        // $auth['authorization'] = "authorized";
         if($auth['authorization'] == "authorized") {
-            $result = $this->model->getUsers();
+            $user_id = $auth['userId'];
+            $result = $this->model->getUser($user_id);
+            if ($result['result'] == 1) {
+                $this->sendResponse($result['data'][0], HTTP_Status::HTTP_OK);
+
+            } else {
+                $json_response = array(
+                    "error" => [
+                        "title" => "Invalid ID",
+                        "detail" => "No such user ",
+                        "status" => 404
+                      ]
+                );
+
+                $this->sendResponse($json_response, HTTP_Status::HTTP_NOT_FOUND);
+            }
             // var_dump($result);
-            $this->sendResponse($result, HTTP_Status::HTTP_OK);
+
         } else {
             $this->sendResponse(array("error" => "unauthorized"), HTTP_Status::HTTP_UNAUTHORIZED);
         }
 
     }
 
-    public function post_edit($id) {
+    public function post_login() {
         $myArray = $this->getJsonData();
 
-        $newName = $myArray['name'];
-        $newPassword = $myArray['password'];
+        $result = $this->model->authentication($myArray);
 
-        if($this->model->editUser($newName, $newPassword, $id)) {
-            $this->sendResponse(array("success" => "row updated"), HTTP_Status::HTTP_OK);
-        } else {
-            $this->sendResponse(array("error" => "row NOT updated"), HTTP_Status::HTTP_NOT_FOUND);
-        }
+        if ($result['result'] == 1) {
+          $payload_token = array(
+            "username" => $result['data']['username']
+          );
 
-    }
+          $token = $this->jwt->generate_token($result['data']['user_id'], $payload_token);
 
-    public function post_index() {
-        $myArray = $this->getJsonData();
-
-        $resArray = array("title" => "Hello",
-                        "details" => array(
-                            "choice 1" => "World",
-                            "choice 2" => "Philippines"
-                        )
-                    );
-
-        if($myArray['success'] == "yes") {
-            $this->sendResponse($resArray, 200);
-        } else {
-            $this->sendResponse(array("title" => "error"), HTTP_Status::HTTP_NOT_FOUND);
-        }
-    }
-
-    public function post_signin() {
-        $myArray = $this->getJsonData();
-
-        $newName = $myArray['name'];
-        $newPassword = $myArray['password'];
-        $user_id = 1;
-        $token_payload = array("name" => $newName, "pass" => $newPassword);
-
-        $token = $this->jwt->generate_token($user_id, $token_payload);
-
-        $response = array(
-            'name' => $newName,
-            'password' => $newPassword,
+          $json_response = array(
+            'id' => $result['data']['user_id'],
+            'username' => $result['data']['username'],
             'meta' => [
-                    'token' => $token
-                ]
-        );
+                  'token' => $token
+              ]
+          );
 
-        $this->sendResponse($response, HTTP_Status::HTTP_CREATED);
+          $this->sendResponse($json_response, HTTP_Status::HTTP_OK);
+        } else {
+          $json_response = array(
+              "error" => [
+                  "title" => "Authorization Error",
+                  "detail" => "Invalid credentials",
+                  "status" => 404
+                ]
+          );
+
+          $this->sendResponse($json_response, HTTP_Status::HTTP_NOT_FOUND);
+        }
+
     }
+
+    public function post_index(){
+        $myArray = $this->getJsonData();
+
+        $result = $this->model->createUser($myArray);
+
+        if($result['result'] == 0) {
+          $json_response = array(
+              "error" => [
+                  "title" => "Invalid inputs",
+                  "detail" => "Missing input in several fields.",
+                  "status" => 400
+                ]
+          );
+
+          $this->sendResponse($json_response, HTTP_Status::HTTP_BAD_REQUEST);
+        } else if ($result['result'] == -1) {
+          $json_response = array(
+              "error" => [
+                  "title" => "Invalid inputs",
+                  "detail" => "Password does not match.",
+                  "status" => 400
+                ]
+          );
+
+          $this->sendResponse($json_response, HTTP_Status::HTTP_BAD_REQUEST);
+        } else if ($result['result'] == -2) {
+          $json_response = array(
+              "error" => [
+                  "title" => "Account Creation Failed",
+                  "detail" => "User already exists.",
+                  "status" => 400
+                ]
+          );
+
+          $this->sendResponse($json_response, HTTP_Status::HTTP_BAD_REQUEST);
+        } else {
+          $json_response = array(
+              "success" => [
+                  "title" => "Success",
+                  "detail" => "Account created",
+                  "status" => 201
+                ]
+          );
+
+          $this->sendResponse($json_response, HTTP_Status::HTTP_CREATED);
+        }
+    }
+
+
 }

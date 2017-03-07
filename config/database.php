@@ -8,5 +8,10 @@
 
 $db['host'] = 'localhost';
 $db['user'] = 'root';
+$db['database'] = 'bahalanapp_db';
+
+//localhost
 $db['password'] = '';
-$db['database'] = 'test_db';
+
+//hosting
+//$db['password'] = 'itpeople2016';

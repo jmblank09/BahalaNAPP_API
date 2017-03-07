@@ -187,7 +187,6 @@ class Jwt
                 }catch(Exception $e){
                   return json_encode(array(
                                         'id' => null,
-                                        'user_type' => null,
                                         'username' => null,
                                         'authorization' => 'unauthorized - failed decode'
                                       ));
@@ -195,7 +194,6 @@ class Jwt
               }else {
                 return json_encode(array(
                                       'id' => null,
-                                      'user_type' => null,
                                       'username' => null,
                                       'authorization' => 'unauthorized - no header found'
                                     ));
